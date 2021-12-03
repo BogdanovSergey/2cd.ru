@@ -5,3 +5,5 @@
 https://web.archive.org/web/20020528031553/http://www.2cd.ru/
 
 Стэк: PHP5, MySQL, Javascript, Html, Css.
+
+<img src="p1.gif">![2021-12-03_17-21-40](https://user-images.githubusercontent.com/6584571/144617997-76a37753-3a0a-4ad7-85ea-27457ec1ee19.png)
