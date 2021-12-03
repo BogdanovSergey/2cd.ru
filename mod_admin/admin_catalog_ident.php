@@ -1,0 +1,128 @@
+<?
+
+	function ADM_catalog_identify() {
+		global $HTTP_GET_VARS;
+		global $TO;
+		global $TO2;
+		$i		= 0;
+		$TO[ip]		= '195.68.136.26';
+		$TO[port]	= '80';
+		$dir = '/tmp/';
+		$TO[send_str]	= array(
+				'GET /Download/%5BProgramID%3D','%5D HTTP/1.0'."\n".
+				'User-Agent: Mozilla/4.0 (compatible; MSIE 5.0; Windows 98)'."\n".
+				'Accept: */*'."\n".
+				'Host: online.download.ru'."\n\n");
+		$TO2[send_str]	= array(
+				'GET ',	' HTTP/1.0'."\n".
+				'Referer: ',		"\n".
+				'Connection: Keep-Alive'."\n".
+				'User-Agent: Mozilla/4.1 [en] (compatible; MSIE 3.0; Windows 95)'."\n".
+				'Host: ',		"\n".
+				'Accept: image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, image/png, */*'."\n".
+				'Accept-Encoding: gzip'."\n".
+				'Accept-Language: en'."\n".
+				'Accept-Charset: iso-8859-1,*,utf-8'."\n\n");
+		
+		$f = fopen($dir.'idx1.txt','a');
+		$tmp = mysql_query("SELECT id,download_url,filename,exact_size FROM S_goods WHERE link=$HTTP_GET_VARS[ident] and tested=0 and active=0");
+		while($row = mysql_fetch_object($tmp)) {
+			$LINK	= substr($row->download_url,46,-1);
+			$STR	= $TO[send_str][0].$LINK.$TO[send_str][1];
+			$REMOTE = fsockopen($TO[ip], $TO[port], &$errno, &$errstr);
+			fputs($REMOTE, $STR);
+			$str = 0;
+			while(!feof($REMOTE)) {
+			    $income_str = fgets($REMOTE,1024);
+			    if(preg_match("/^Location: /",$income_str)) {
+				    $file_url = ereg_replace('Location: ','',$income_str);
+				    $file_url = ereg_replace("\x0D\x0A",'',$file_url);
+								    
+				    # setting real url and file name
+				    #$file_name = substr($file_url,strrpos($file_url,'/')+1,strlen($file_url));
+				    
+				    mysql_query("UPDATE S_goods SET real_url='$file_url',tested=1 WHERE id=$row->id");
+				    fputs($f,"$file_url\x0D\x0A");
+
+				    #print "$i connect $row->download_url (get $LINK)<br>\n";
+				    break;
+			    }
+			    $str++;
+			    if($str>30) break;
+			}
+			fclose($REMOTE);
+#			ADM_retreive_file_size($file_url,$row->id);
+			$i++;
+###			if($i>10) exit;			####
+		}
+		fputs($f,"\x0D\x0A\n");
+		fclose($f);
+		#exit;
+	
+	}
+
+
+	function ADM_retreive_file_size($file_url,$id) {
+		$TO[port] = 80;
+		global $TO2;
+		if(preg_match("/\:8080\//",$file_url)) $TO[port]=8080;
+		
+		$to = ereg_replace('http://www.','',$file_url);
+		$to = ereg_replace('http://','',$to);
+		$to = ereg_replace('ftp://', '',$to);
+		$to = ereg_replace('www.', '',$to);
+		$to = ereg_replace(':8080\/', '',$to);
+		$to = substr($to,0,strpos($to,'/')+1);
+		$h  = $to;
+		$file_size = 0;
+		$to = substr($to,0,strpos($to,'/'));
+		$TO[ip] = GetHostByName($to);
+
+###		print "connecting $TO[ip] ($to)\n";		####
+	        # getting real size, setting tested=1
+		$REMOTE2 = @fsockopen($TO[ip], $TO[port], &$errno2, &$errstr2);
+	        $STR2	 =  $TO2[send_str][0]. $file_url.
+			    $TO2[send_str][1]. $file_url.
+			    $TO2[send_str][2]. $TO[ip].
+			    $TO2[send_str][3];
+###		print "$STR2\n\n\n";				####
+		
+		fputs($REMOTE2, $STR2);
+		$str = 0;
+	        while(!feof($REMOTE2)) {
+###			print $in_str;				####
+			if(!$test_header) {
+				# if file found		found=3
+				# if file size unknown	found=2
+				# if file not found	found=1
+				# if other thing...	found=0
+				if(preg_match("/200 OK/",$in_str)) { $test_header=1;
+					mysql_query("UPDATE S_goods SET found=3 WHERE id=$id");
+				}
+				if(preg_match("/404 Not Found/",$in_str)) {  $test_header=1;
+					mysql_query("UPDATE S_goods SET found=1 WHERE id=$id");
+					break;
+				}
+			}
+			$in_str = fgets($REMOTE2,1024);
+
+		        if(preg_match("/^Content-Length: /",$in_str)) {
+#				print $in_str."\n";
+			        $file_size = ereg_replace('Content-Length: ','',$in_str);
+			        $file_size = ereg_replace("\x0D\x0A",'',$file_size);
+				$file_name = substr($file_url,strrpos($file_url,'/')+1,strlen($file_url));
+				mysql_query("UPDATE S_goods SET size='$file_size', filename='$file_name', tested=1 WHERE id=$id");
+				break;
+			}
+			$str++;
+			if($str>30) {
+				mysql_query("UPDATE S_goods SET found=2 WHERE id=$id");
+				break;
+			}
+		}
+		fclose($REMOTE2);
+#		print 'end';exit;
+	}
+
+
+?>

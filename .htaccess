@@ -1,0 +1,8 @@
+ErrorDocument 403 "<html><center><br><br><br><br><br><b>You can not access this place!</b></center></html>
+ErrorDocument 404 "<html><center><br><br><br><br><br><b>Document not found!</b></center></html>
+DirectoryIndex 1.php
+AddDefaultCharset windows-1251
+CharsetRecodeMultipartForms On
+
+#CharsetDisable On
+

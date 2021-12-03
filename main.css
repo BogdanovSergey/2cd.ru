@@ -1,0 +1,112 @@
+td
+{	COLOR: #000000;
+	FONT-FAMILY: Tahoma, Arial, Helvetica;
+	FONT-SIZE: 8pt;
+}
+
+
+/*
+.
+{	COLOR: #000000;
+	FONT-FAMILY: Tahoma, Arial, Helvetica;
+	FONT-SIZE: 8pt;
+}
+
+input,select{font-size:8px;}
+a{color:#330099;text-decoration:underline}
+*/
+
+input,select{font-size:12px;}
+
+.index_center_down
+{ 	COLOR: #FF0000;
+	FONT-FAMILY: Tahoma, Arial, Helvetica;
+	FONT-SIZE: 8pt;
+}
+
+/* Forms */
+	.Forms
+	{ 	border-width: 1px;
+		background-color: ccff00;
+		FONT-FAMILY: Tahoma, Arial, Helvetica;
+		FONT-SIZE: 10;
+	}
+	.FormsOrange
+	{ 	border-width: 1px;
+		background-color: rgb(254,203,0);
+		FONT-FAMILY: Tahoma, Arial, Helvetica;
+		FONT-SIZE: 10;
+	}
+
+/* Main user menu */
+	.MENU
+	{ 	COLOR: #000000;
+		FONT-FAMILY: Tahoma, Arial, Helvetica;
+		FONT-SIZE: 12;
+	}
+        .COPY
+        {       COLOR: #000000;
+                FONT-FAMILY: Tahoma, Arial, Helvetica;
+                FONT-SIZE: 10;
+        }
+
+
+/* Simple text */
+	.text
+	{ 	COLOR: #005555;
+		FONT-FAMILY: Tahoma, Arial, Helvetica;
+		FONT-SIZE: 8pt;
+	}
+/* Last new products */
+	.N_caption
+	{ 	COLOR: #009900;
+		FONT-FAMILY: Tahoma, Arial, Helvetica;
+		FONT-SIZE: 8pt;
+	}
+	.N_link
+	{	COLOR: #0000DD;
+		FONT-FAMILY: Tahoma, Arial, Helvetica;
+		FONT-SIZE: 8pt;
+	}
+	.N_price
+	{ 	COLOR: #000000;
+		FONT-FAMILY: Tahoma, Arial, Helvetica;
+		FONT-SIZE: 8pt;
+	}
+
+/* Best products */
+	.BEST_link
+	{ 	COLOR: #0000DD;
+		FONT-FAMILY: Tahoma, Arial, Helvetica;
+		FONT-SIZE: 8pt;
+	}
+
+.PPRErrorText
+{ COLOR: #ff0000;
+  FONT-FAMILY: Arial, Helvetica, sans-serif;
+  FONT-SIZE: x-small;
+  FONT-WEIGHT: bold; }
+/* Text style formating of the field label. */
+
+.PPRLabelText
+{ COLOR: #000000;
+  FONT-FAMILY: Verdana, Helvetica, sans-serif;
+  FONT-SIZE: xx-small;
+  FONT-WEIGHT: bold; }
+
+
+
+
+/* Text style formating of the input box. */
+.CSS_forms
+{ COLOR: #000000;
+  FONT-FAMILY: Arial, Helvetica, sans-serif;
+  FONT-SIZE: x-small;
+  BACKGROUND-COLOR: #ffffff; }
+/* Text style formating of the radio and check boxes. */
+
+.PPCheckRadio
+{ COLOR: #000000;
+  FONT-FAMILY: Arial, Helvetica, sans-serif;
+  FONT-SIZE: x-small; }
+

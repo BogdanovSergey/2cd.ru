@@ -1,0 +1,251 @@
+<?
+	function ORD_generate($ORDER_ID,$IS_HTML,$JUST_COUNT) {
+		global $MY;
+		global $WORDS;
+		global $ALREADY;
+		global $SESSION;
+		global $ORDER_INFO;
+		global $HTTP_GET_VARS;
+		global $ADMIN_CONNECTED;
+		
+		$ORDER_INFO		= array();
+		$ORDER_INFO[size]	= 0;
+		$ORDER_INFO[items]	= 0;
+		$ORDER_INFO[real_items]	= 0;
+		$ORDER_INFO[levels]	= 0;
+		$ORDER_INFO[disks]	= 0;
+		$ORDER_INFO[price]	= 0;
+		$end			= "\x0D\x0A";
+		$no			= 0;
+		$allsize		= 0;
+		$dynsize 		= 0;
+		$curcd			= 1;
+		$WORDS[size_MB]		= 'mb';
+		$WORDS[size_KB]		= 'kb';
+		$CRC[real_files]	= 0;
+		$CRC[levels]		= 0;
+		settype($HTTP_GET_VARS[p],'integer');
+		$NEEDED_CD		= $HTTP_GET_VARS[p];
+		if($ADMIN_CONNECTED) {
+			$res = mysql_query("SELECT * FROM S_orders WHERE order_id=$ORDER_ID ORDER BY cd_number");
+		} else {
+			$res = mysql_query("SELECT id, product_id, level_id, amount FROM S_basket WHERE
+									key_id = $SESSION[key_id] and
+									active = 1 and
+									ready  = 0");
+		}
+		while($ord = mysql_fetch_object($res)) {
+			$allsize += $ord->size;
+			# is it product or whole level ?
+			if(!$ord->level_id) {
+				# it is product
+				$g = GOO_get_active_product_by_id($ord->product_id);
+				if($g->id) {
+					$ALREADY["p".$g->id]	= $ord->amount;
+					$no++;
+					$CRC[real_files]++;
+					$CAPTION[$no]		= $g->caption;
+					$SOFT[$no]		= $g->filename;
+					$SOFT_CD[$no] 		= $g->cd_number;
+					$SOFT_SIZE[$no]		= $g->size;
+					$SOFT_CD_FOLDER[$no]	= GOO_get_cd_folder($g->link);
+					$SOFT_CD_FOLDER_TO[$no]	= $SOFT_CD_FOLDER[$no];
+					if($IS_HTML) 		{$LEVEL[$no] = GOO_show_path($g->id,1);}
+				}
+			} else {
+				$ALREADY["l".$ord->level_id]	= $ord->amount;
+				$CRC[levels]++;
+				# it is level
+				list($CAPTION, $LEVEL,$SOFT, $SOFT_CD, $SOFT_CD_FOLDER,$SOFT_CD_FOLDER_TO,$SOFT_SIZE, $no)
+				    = ORD_order_get_goods_by_level($CAPTION,$LEVEL,$ord->level_id,$SOFT,$SOFT_CD,$SOFT_CD_FOLDER,$SOFT_CD_FOLDER_TO,$SOFT_SIZE,$no,$IS_HTML);
+				#$SOFT_CD_FOLDER_TO[$no]	= "cd$curcd\\".$SOFT_CD_FOLDER[$no];
+			}
+		}
+		$allsize = GOO_round_size($allsize);
+		if(!$JUST_COUNT) {
+			if(!$IS_HTML) {
+				$out	 =
+				"@ECHO OFF				$end".
+				"CLS					$end".
+				"ECHO \"Order Maker 1.2\"	$end".
+				"ECHO Order size is $allsize		$end".
+				"ECHO There are $no files		$end".
+				"IF (%1)==() goto ERROR			$end".
+				"SET DIR=order$ORDER_ID			$end".
+				"MKDIR %DIR%				$end$end";
+			} else {
+				$out =	"<html><body bgcolor=white><table border=0 cellpadding=0 cellspacing=0 align=center width=100%><tr><td bgcolor=black>".
+					"<table border=0 align=center cellpadding=1 cellspacing=1 width=100%>$end";
+			}
+		}
+		
+		$items	 	= 0;
+		$cd	 	= 0;
+		$old_cd	 	= 0;
+		$dynsize 	= 0;
+		$cdpath	 	="cd1";
+		$CRC[size] 	= 0;
+		$CRC[files]	= 0;
+		$CRC[ready_cd]	= 0;
+		$CRC[exact_size]= 0;
+		$HTMLitems	= 0;
+		$levs	 	= array();
+		#pass thru every item
+	if($SOFT) {
+		while(list($key,$value) = each($SOFT)) {
+			$items++;
+
+			# get amount of cd's
+			if($dynsize+$SOFT_SIZE[$key]>=$MY[disk650_bytes]) {
+				if(!$IS_HTML) {$outs = "ECHO /* ------- CD Written status: files $items, cdsize ".GOO_round_size($dynsize);}
+				$cd++;
+				$ORDER_INFO["cd$cd"."size"] = $dynsize;#+$SOFT_SIZE[$key];
+#				print "$cd - ".GOO_round_size($ORDER_INFO["cd$cd"."size"])."<br>";
+				$CRC[exact_size] += $dynsize;
+				$CRC[ready_cd]++;
+				$items	 = 0;
+				$dynsize = 0;
+				$cdpath	 = "cd$cd";
+				if(!$IS_HTML) {$out .= $outs.", next is $cdpath ------- */$end";}
+			}
+			$dynsize	+= $SOFT_SIZE[$key];
+			$new_cd		 = $SOFT_CD[$key];
+			$CRC[files]++;
+			$CRC[size]	+= $SOFT_SIZE[$key];
+			# count last cd
+			$tmp=$cd+1;
+			if(!$ORDER_INFO["cd$tmp"."size"]) {
+				$ORDER_INFO["cd$tmp"."size"]  = $dynsize;
+			} else {
+				$ORDER_INFO["cd$tmp"."size"] += $dynsize;
+			}
+			
+			if(!$IS_HTML) {
+				# making batch commands
+				if($new_cd != $old_cd) {
+					$out .=	"ECHO /* ------- Insert CD $SOFT_CD[$key] -------- */$end".
+						"PAUSE$end";
+					$old_cd = $new_cd;
+				}
+				$out .= "\tECHO $key processing: $SOFT[$key] (".GOO_round_size($SOFT_SIZE[$key]).")$end".
+					"\t\t\txcopy /Y /F /H /R /Z %1:\\".$SOFT_CD_FOLDER[$key]."\\$SOFT[$key] %DIR%\\$cdpath\\$SOFT_CD_FOLDER_TO[$key]\\$end";
+			} else {
+				# making HTML structure
+				if($NEEDED_CD==$cd) {
+					if(!in_array($LEVEL[$key],$levs)) {
+                                		array_push($levs,$LEVEL[$key]);
+						$out .= "\t<tr bgcolor=\"#BBBBBB\"><td> &nbsp; &nbsp; $LEVEL[$key]&nbsp;</td></tr>$end";
+                        		}
+					$HTMLitems++;
+					$out .= "\t<tr bgcolor=white><td> &nbsp; &nbsp; <a href=\"$SOFT_CD_FOLDER_TO[$key]\\$SOFT[$key]\">$CAPTION[$key]&nbsp;</a></td></tr>$end";
+				}
+			}
+		}
+		# count last cd size
+		$tmp=$cd+1;
+		if($ORDER_INFO["cd$tmp"."size"]) {
+			$cd++;
+#		$tmp=ceil($CRC[size]/$MY[disk650_bytes]);
+#		if(($tmp>$cd) && ($dynsize>0)) {
+#			print GOO_round_size($ORDER_INFO["cd$tmp"."size"])."<--last cd<br>";
+#			
+#		}
+		}
+
+		if(!$JUST_COUNT) {
+			$items++;
+			if(!$IS_HTML) {
+				$out .= "ECHO /* ------- CD Written status: files $items, cdsize ".GOO_round_size($dynsize)." ------ */$end".
+					"ECHO /* ------- GLOBAL STATUS: files $CRC[files], cdsize ".GOO_round_size($CRC[size])." ------ */$end$end$end";
+				$out .=
+					"GOTO END$end".
+					":ERROR$end".
+					"ECHO.$end".
+					"ECHO   This programm must be executed with parameter:$end".
+					"ECHO   make.bat X$end".
+					"ECHO   Where \"X\" is your CD drive$end".
+					":END.$end";
+			} else {
+				$out .= "</table></td></tr><tr><td align=right>$WORDS[files] $HTMLitems</td></tr></table></body></html>";
+			}
+
+			header('HTTP/1.1 200 OK');
+            		header('Date: Tue, 26 Feb 2002 10:00:00 GMT');
+			header('Content-Length: '.strlen($out));
+            		header('Last-Modified: Tue, 11 Feb 2002 18:00:00 GMT');
+            		header('ETag: "1a4832-9000-3beec00a"');
+            		header('Accept-Ranges: bytes');
+            		header('Connection: close');
+            		header('Content-type: application/octet-stream');
+			print $out;
+		}
+
+	}#print GOO_round_size($CRC[exact_size])." <--all exact<br>";
+		$ORDER_INFO[size]	= $CRC[size];
+		$ORDER_INFO[items]	= $CRC[real_files];
+		#$ORDER_INFO[items]	= $CRC[files];
+		$ORDER_INFO[real_items]	= $CRC[files];
+		$ORDER_INFO[levels]	= $CRC[levels];
+		$ORDER_INFO[disks]	= $cd;
+		$ORDER_INFO[price]	= $CRC[ready_cd]*$MY[disk_price];
+		return $cd;
+	}
+
+
+	function ORD_order_get_goods_by_level($CAPTION,$LEVEL,$id,$SOFT,$SOFT_CD,$SOFT_CD_FOLDER,$SOFT_CD_FOLDER_TO,$SOFT_SIZE,$no,$IS_HTML) {
+		global $ALREADY;
+		# get ids of goods in whole level tree
+		$GOOLEV = array($id);
+		$tmpvar = mysql_query("SELECT id,size FROM S_levels WHERE link=$id and active=1");
+		while($tmpres = mysql_fetch_object($tmpvar)) {
+			if($tmpres->id) {
+				$ALREADY["l".$tmpres->id]	= 1;
+				array_push($GOOLEV,$tmpres->id);
+				$tmpvar2 = mysql_query("SELECT id FROM S_levels WHERE link=$tmpres->id and active=1");
+				while($tmpres2 = mysql_fetch_object($tmpvar2)) {
+					if($tmpres2->id) {
+						$ALREADY["l".$tmpres2->id]	= 1;
+						array_push($GOOLEV,$tmpres2->id);
+					}
+				}
+			}
+		}
+		# make patch for SQL query
+		foreach($GOOLEV as $var) {
+			$w = ' or ';
+			if(!$o) { $o=1;
+				  $w=''; }
+			$sqlstr .= $w.'link='.$var;
+		}
+		if($IS_HTML) {
+		    $order = 'link';
+		    #$order = 'caption';
+		} else {
+		    $order = 'cd_number';
+		}
+		$tmp = mysql_query("SELECT id,link,filename,cd_number,caption,size FROM S_goods WHERE active=1 and ($sqlstr) ORDER BY $order");
+		while($res = mysql_fetch_object($tmp)) {
+		    # let's get the folder on CD
+		    $tt	   = mysql_query("SELECT id,link FROM S_levels WHERE id=$res->link and active=1");
+		    $ttres = mysql_fetch_object($tt);
+		    if($ttres->id) {
+			$no++;
+			$SOFT[$no]	= $res->filename;
+			$SOFT_CD[$no]	= $res->cd_number;
+			
+			if($ttres->link>0) {
+				$SOFT_CD_FOLDER[$no] = "idx$ttres->link";
+		 	} else {
+				$SOFT_CD_FOLDER[$no] = "idx$ttres->id";
+		    	}
+			$SOFT_SIZE[$no]			= $res->size;
+			$SOFT_CD_FOLDER_TO[$no]		= $SOFT_CD_FOLDER[$no];
+			if($IS_HTML) {$CAPTION[$no]	= $res->caption; }
+			if($IS_HTML) {$LEVEL[$no]	= GOO_show_path($res->id,1); }
+		    }
+		}
+		return array($CAPTION,$LEVEL,$SOFT,$SOFT_CD,$SOFT_CD_FOLDER,$SOFT_CD_FOLDER_TO,$SOFT_SIZE,$no);
+	}
+
+
+?>

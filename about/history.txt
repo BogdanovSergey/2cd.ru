@@ -1,0 +1,19 @@
+#################################################
+# Cyber Shop Project				#
+# Copyright 2001/2002 Bogdanov Sergey		#
+# e-mail: sbugs@mail.ru				#
+# Project started ~Sep 2001			#
+#################################################
+
+
+
+
+Version 1.0 Build 67	
+======================
+	    Сбт Мар 16 00:07:52 EST 2002	Project started with base functions
+	    Пнд Мар 18 01:27:01 EST 2002	Simple users view for administrator, now you can see all registered users,
+						sorting by alphabet.
+	    Пнд Мар 18 03:08:43 EST 2002	Statistic system counts all users
+	    Втр Мар 19 00:56:54 EST 2002	"About us" section created.
+
+	    Wed Apr 10 11:58:44 MSD 2002	users section for administrator updated, now you can see users activity
